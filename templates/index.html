@@ -1,1 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#09090b">
+<title>Storyboard Engine v10.4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#09090b;--sf:#111113;--card:#18181b;--card2:#1f1f23;
+  --bdr:#27272a;--bdr2:#3f3f46;
+  --t:#fafafa;--t2:#a1a1aa;--t3:#71717a;
+  --m:#34d399;--mbg:rgba(52,211,153,.08);--mbd:rgba(52,211,153,.2);
+  --a:#fbbf24;--abg:rgba(251,191,36,.08);
+  --r:#f87171;--rbg:rgba(248,113,113,.08);
+  --v:#a78bfa;--vbg:rgba(167,139,250,.08);
+  --sb:env(safe-area-inset-bottom,0px);color-scheme:dark;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{height:100%;background:var(--bg)}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--t);height:100%;display:flex;flex-direction:column;-webkit-text-size-adjust:100%}
+.app{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 80px}
+.mono{font-family:'Geist Mono',monospace}
 
+/* Header */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(9,9,11,.88);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.hdr-i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--m),var(--v));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#000;flex-shrink:0}
+.hdr h1{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.hdr small{font-family:'Geist Mono',monospace;font-size:9px;color:var(--t3);display:block;margin-top:1px}
+.hdr-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hdr-r span{font-family:'Geist Mono',monospace;font-size:10px;color:var(--t2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3);transition:.3s}
+.dot.on{background:var(--m);box-shadow:0 0 8px rgba(52,211,153,.5);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Labels & cards */
+.lbl{font-family:'Geist Mono',monospace;font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1.2px;margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.lbl::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--bdr);margin:0 -16px;padding:0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.2s}
+.tab.on{color:var(--m);border-bottom-color:var(--m)}
+.tab .cnt{font-family:'Geist Mono',monospace;font-size:10px;margin-left:4px;opacity:.6}
+
+/* Config */
+.cfg-t{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:12px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:12px;font-size:13px;font-weight:600}
+.cfg-t .ch{color:var(--t3);font-size:10px;transition:.3s}.cfg-t.open .ch{transform:rotate(180deg)}
+.cfg-b{max-height:0;overflow:hidden;transition:max-height .35s}.cfg-b.open{max-height:600px}
+.cfg-in{padding:12px 0 0;display:flex;flex-direction:column;gap:10px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-family:'Geist Mono',monospace;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px}
+.fld input,.fld select{background:var(--sf);border:1px solid var(--bdr);color:var(--t);padding:10px 12px;border-radius:10px;font-size:14px;font-family:'Outfit',sans-serif;outline:none;width:100%;-webkit-appearance:none;color-scheme:dark}
+.fld select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2371717a'%3E%3Cpath d='M5 7L0 2h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.fld input:focus,.fld select:focus{border-color:var(--m);box-shadow:0 0 0 3px var(--mbg)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Upload */
+.upload{border:1.5px dashed var(--bdr2);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;background:var(--sf);transition:.25s;position:relative;overflow:hidden;margin-top:8px}
+.upload.ok{border-color:var(--m);border-style:solid}
+.upload h3{font-size:14px;font-weight:600}.upload p{font-size:10px;color:var(--t2);margin-top:3px}
+.upload input{display:none}
+
+/* Stats row */
+.stats{display:flex;gap:6px;flex-wrap:wrap}
+.stat{flex:1;min-width:60px;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:10px 8px;text-align:center}
+.stat-n{font-size:22px;font-weight:800;line-height:1}
+.stat-l{font-family:'Geist Mono',monospace;font-size:7px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+
+/* Gallery grids */
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.gal-item{position:relative;border-radius:6px;overflow:hidden;background:var(--sf);aspect-ratio:1/1;cursor:pointer}
+.gal-item img{width:100%;height:100%;object-fit:cover}
+.gal-item .gl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);padding:2px 4px;font-family:'Geist Mono',monospace;font-size:7px;color:var(--t2);text-align:center}
+.gal-item.empty{display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--t3);font-family:'Geist Mono',monospace;border:1px dashed var(--bdr)}
+.gal-env{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.gal-env .gal-item{aspect-ratio:16/9}
+
+/* ═══ PANEL CARDS — the star of the show ═══ */
+.panel{background:var(--card);border:1px solid var(--bdr);border-radius:12px;margin-bottom:10px;overflow:hidden;transition:.2s}
+.panel.done{border-color:var(--mbd)}
+.panel-img{width:100%;aspect-ratio:16/9;background:var(--sf);position:relative;cursor:pointer;overflow:hidden}
+.panel-img img{width:100%;height:100%;object-fit:cover;display:block}
+.panel-img .empty-shot{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--t3)}
+.panel-img .empty-shot .big{font-size:28px;opacity:.3}
+.panel-body{padding:10px 12px}
+.panel-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.panel-id{font-family:'Geist Mono',monospace;font-size:11px;color:var(--m);font-weight:600}
+.badge{font-family:'Geist Mono',monospace;font-size:9px;padding:2px 6px;border-radius:4px}
+.badge-noir{background:rgba(52,211,153,.1);color:var(--m)}
+.badge-fern{background:var(--vbg);color:var(--v)}
+.panel-vo{font-size:12px;color:var(--t2);line-height:1.5;margin:4px 0;max-height:3em;overflow:hidden;transition:max-height .3s}
+.panel-vo.expanded{max-height:none}
+.panel-meta{font-family:'Geist Mono',monospace;font-size:9px;color:var(--t3);margin-top:4px}
+.panel-actions{display:flex;gap:6px;margin-top:8px}
+.p-btn{flex:1;padding:8px;border-radius:8px;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;text-align:center}
+.p-btn:active{transform:scale(.96)}
+.p-btn.gen{background:var(--m);color:#000}
+.p-btn.redo{background:var(--sf);color:var(--t2);border:1px solid var(--bdr)}
+.p-btn.loading{background:var(--card2);color:var(--a);pointer-events:none}
+.p-btn.loading::after{content:'';display:inline-block;width:10px;height:10px;border:2px solid var(--a);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-left:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Batch buttons */
+.batch-row{display:flex;gap:8px;margin-top:8px}
+.batch-btn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;text-align:center}
+.batch-btn:active{transform:scale(.96)}
+.batch-btn.primary{background:var(--m);color:#000}
+.batch-btn.secondary{background:var(--card);color:var(--t2);border:1px solid var(--bdr)}
+.batch-btn.stop{background:var(--rbg);color:var(--r)}
+
+/* Progress */
+.prog{margin-top:12px}
+.prog-bar{height:3px;background:var(--sf);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;width:0;background:linear-gradient(90deg,var(--m),var(--v));background-size:200% 100%;transition:width .4s}
+.prog-fill.on{animation:shimmer 2s linear infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.prog-text{font-family:'Geist Mono',monospace;font-size:10px;color:var(--t2);margin-top:4px;text-align:right}
+
+/* Log */
+.log{background:var(--sf);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-top:8px;font-family:'Geist Mono',monospace;font-size:10px;line-height:1.8;color:var(--t3);max-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.log::-webkit-scrollbar{width:3px}.log::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+.log .ok{color:var(--m)}.log .fail{color:var(--r)}.log .warn{color:var(--a)}.log .head{color:var(--v);font-weight:600}
+
+/* Preview overlay */
+.pv{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;flex-direction:column;gap:8px}
+.pv.show{display:flex}
+.pv img{max-width:100%;max-height:80vh;border-radius:8px}
+.pv-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:var(--card);border:1px solid var(--bdr);color:var(--t);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pv-id{font-family:'Geist Mono',monospace;font-size:11px;color:var(--t2)}
+
+/* Toast */
+.toast{position:fixed;top:62px;left:16px;right:16px;max-width:400px;margin:0 auto;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:500;z-index:200;transform:translateY(-16px);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{transform:none;opacity:1}.toast.success{border-color:var(--mbd);color:var(--m)}.toast.error{border-color:rgba(248,113,113,.2);color:var(--r)}
+
+/* Collapsible */
+.col-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 0}
+.col-h .ch{font-size:10px;color:var(--t3);transition:.3s}
+.col-h.open .ch{transform:rotate(180deg)}
+.col-b{max-height:0;overflow:hidden;transition:max-height .35s}.col-b.open{max-height:5000px;overflow-y:visible}
+
+/* Section header in panels view */
+.sec-hdr{font-size:13px;font-weight:700;color:var(--v);padding:14px 0 6px;border-bottom:1px solid var(--bdr);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.sec-hdr .sec-cnt{font-family:'Geist Mono',monospace;font-size:10px;color:var(--t3)}
+.sec-prog{width:100%;height:2px;background:var(--sf);border-radius:1px;overflow:hidden;margin-top:4px}
+.sec-prog-fill{height:100%;border-radius:1px;width:0;background:linear-gradient(90deg,var(--m),var(--v));transition:width .4s}
+.sec-hdr .sec-active{font-family:'Geist Mono',monospace;font-size:9px;color:var(--a);margin-left:6px}
+
+/* Generating pulse on active panel */
+.panel.generating{border-color:var(--a);box-shadow:0 0 12px rgba(251,191,36,.15);animation:gen-pulse 1.5s ease-in-out infinite}
+@keyframes gen-pulse{0%,100%{border-color:var(--a);box-shadow:0 0 8px rgba(251,191,36,.1)}50%{border-color:var(--v);box-shadow:0 0 16px rgba(167,139,250,.2)}}
+.panel.generating .panel-img .empty-shot .big{animation:spin 3s linear infinite;color:var(--a)}
+.panel.generating .panel-id{color:var(--a)}
+
+.hidden{display:none!important}
+@media(min-width:768px){.app{max-width:600px;margin:0 auto}.hdr{max-width:600px;margin:0 auto}.gal{grid-template-columns:repeat(4,1fr)}.gal-env{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1024px){.app{max-width:900px}.hdr{max-width:900px}}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="pv" id="pv" onclick="closePv()"><button class="pv-close" onclick="closePv()">✕</button><img id="pvImg" src=""><div class="pv-id" id="pvId"></div></div>
+
+<div class="hdr">
+  <div class="hdr-i">S</div>
+  <div><h1>Storyboard Engine</h1><small>v10.4 · cloud · L1-L13</small></div>
+  <div class="hdr-r"><span id="statusText">Ready</span><div class="dot" id="dot"></div></div>
+</div>
+
+<div class="app">
+  <!-- CONFIG -->
+  <div class="cfg-t" id="cfgT" onclick="$('cfgT').classList.toggle('open');$('cfgB').classList.toggle('open')" style="margin-top:16px">
+    ⚙ Settings <span class="ch">▼</span>
+  </div>
+  <div class="cfg-b" id="cfgB"><div class="cfg-in">
+    <div class="fld"><label>API Key</label><input type="password" id="apiKey" placeholder="Paste key" value="{{ saved_key }}"></div>
+    <div class="fld"><label>Style</label><select id="style" onchange="saveCfg()">{% for p in presets %}<option value="{{ p }}" {{ 'selected' if p == saved_style }}>{{ p }}</option>{% endfor %}</select></div>
+    <div class="row2">
+      <div class="fld"><label>Resolution</label><select id="resolution" onchange="saveCfg()">{% for r in resolutions %}<option value="{{ r }}" {{ 'selected' if r == saved_res }}>{{ r }}</option>{% endfor %}</select></div>
+      <div class="fld"><label>Ratio</label><select id="ar" onchange="saveCfg()">{% for a in ar_options %}<option value="{{ a }}" {{ 'selected' if a == saved_ar }}>{{ a }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fld"><label>Model</label><select id="model" onchange="saveCfg()">{% for m in model_options %}<option value="{{ m }}" {{ 'selected' if m == saved_model }}>{{ m }}</option>{% endfor %}</select></div>
+  </div></div>
+
+  <!-- UPLOAD -->
+  <div class="upload" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <h3 id="fileName">⬆ Load Storyboard</h3><p>Tap to select file</p>
+    <input type="file" id="fileInput" accept="*/*">
+  </div>
+
+  <!-- STATS -->
+  <div class="hidden" id="statsSection">
+    <div class="lbl">Overview</div>
+    <div class="stats" id="statsGrid"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="hidden" id="tabSection">
+    <div class="tabs" id="tabs">
+      <div class="tab on" data-tab="shots" onclick="switchTab('shots')">Shots<span class="cnt" id="shotsCnt"></span></div>
+      <div class="tab" data-tab="refs" onclick="switchTab('refs')">Refs<span class="cnt" id="refsCnt"></span></div>
+      <div class="tab" data-tab="batch" onclick="switchTab('batch')">Batch</div>
+      <div class="tab" data-tab="log" onclick="switchTab('log')">Log</div>
+    </div>
+    <!-- Global progress bar — visible on all tabs during generation -->
+    <div class="prog" id="globalProg" style="margin:0">
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+      <div class="prog-text" id="progText"></div>
+    </div>
+  </div>
+
+  <!-- TAB: SHOTS (main view) -->
+  <div class="hidden" id="shotsTab">
+    <div class="batch-row" style="margin-top:12px">
+      <button class="batch-btn secondary" onclick="genNextUndone()">▶ Next Undone</button>
+      <button class="batch-btn secondary" onclick="genAllSection()">Generate Section ▼</button>
+      <button class="batch-btn stop hidden" onclick="stopRun()" id="shotsStop">■ Stop</button>
+    </div>
+    <div id="panelList" style="margin-top:12px"></div>
+  </div>
+
+  <!-- TAB: REFS -->
+  <div class="hidden" id="refsTab">
+    <div class="batch-row" style="margin-top:12px">
+      <button class="batch-btn primary" onclick="run('characters')">Gen Characters</button>
+      <button class="batch-btn secondary" onclick="run('environments')">Gen Envs+Masters</button>
+    </div>
+    <div class="batch-row">
+      <button class="batch-btn secondary" onclick="genStyleAnchor()">🎨 Gen Style Anchor</button>
+    </div>
+
+    <!-- Style Anchor -->
+    <div class="col-h" onclick="toggleCol('styleBody',this)" style="margin-top:12px">
+      <div class="lbl" style="margin:0;flex:1">Style Anchor (L9) <span id="styleStatus" style="color:var(--t3)"></span></div><span class="ch">▼</span>
+    </div>
+    <div class="col-b" id="styleBody">
+      <div id="styleGal" style="margin-top:6px"></div>
+    </div>
+
+    <div class="col-h open" onclick="toggleCol('charBody',this)" style="margin-top:8px">
+      <div class="lbl" style="margin:0;flex:1">Characters <span id="charCount" style="color:var(--m)"></span></div><span class="ch">▼</span>
+    </div>
+    <div class="col-b open" id="charBody"><div id="charGal" class="gal-env"></div></div>
+
+    <div class="col-h open" onclick="toggleCol('envBody',this)" style="margin-top:8px">
+      <div class="lbl" style="margin:0;flex:1">Environments <span id="envCount" style="color:var(--a)"></span></div><span class="ch">▼</span>
+    </div>
+    <div class="col-b open" id="envBody"><div id="envGal" class="gal-env"></div></div>
+  </div>
+
+  <!-- TAB: BATCH -->
+  <div class="hidden" id="batchTab">
+    <div class="batch-row" style="margin-top:12px">
+      <button class="batch-btn primary" onclick="run('full_pipeline')" id="batchMain">▶ Generate All</button>
+      <button class="batch-btn stop hidden" onclick="stopRun()" id="batchStop">■ Stop</button>
+      <button class="batch-btn secondary" onclick="run('export')">↗ Export</button>
+    </div>
+  </div>
+
+  <!-- TAB: LOG -->
+  <div class="hidden" id="logTab">
+    <div class="log" id="log" style="margin-top:12px;max-height:500px"></div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let isRunning=false,currentRunStep='',warnings=[],sectionData=[],allPanels=[];
+
+function toast(m,t='success'){const e=$('toast');e.textContent=m;e.className='toast show '+t;setTimeout(()=>e.className='toast',3000)}
+function openPv(src,label){$('pvImg').src=src;$('pvId').textContent=label;$('pv').classList.add('show')}
+function closePv(){$('pv').classList.remove('show')}
+function toggleCol(id,el){$(id).classList.toggle('open');el.classList.toggle('open')}
+
+// Tabs
+let activeTab='shots';
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('on',el.dataset.tab===t));
+  ['shotsTab','refsTab','batchTab','logTab'].forEach(id=>$(id).classList.add('hidden'));
+  $(t+'Tab').classList.remove('hidden');
+}
+
+// Upload
+$('fileInput').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  $('fileName').textContent='✓ '+file.name;$('dropZone').classList.add('ok');
+  await saveCfg();
+  const form=new FormData();form.append('storyboard',file);
+  const res=await fetch('/api/upload',{method:'POST',body:form});
+  const data=await res.json();
+  if(data.error){toast(data.error,'error');return}
+
+  $('statsGrid').innerHTML=[
+    {v:data.total,l:'Panels',c:'var(--t)'},
+    {v:data.noir,l:'Noir',c:'var(--m)'},
+    {v:data.fern,l:'Fern',c:'var(--v)'},
+    {v:data.chars,l:'Chars',c:'var(--m)'},
+    {v:data.envs,l:'Envs',c:'var(--a)'},
+  ].map(s=>`<div class="stat"><div class="stat-n" style="color:${s.c}">${s.v}</div><div class="stat-l">${s.l}</div></div>`).join('');
+  $('statsSection').classList.remove('hidden');
+  $('tabSection').classList.remove('hidden');
+
+  sectionData=data.sections;
+  toast(`Loaded ${data.total} panels`);
+  addLog(`Loaded: ${data.total} panels`,'head');
+  $('cfgT').classList.remove('open');$('cfgB').classList.remove('open');
+
+  loadPanels();
+  loadRefs();
+  switchTab('shots');
+});
+
+// Load all panels
+async function loadPanels(){
+  try{
+    const res=await fetch('/api/panels');
+    const data=await res.json();
+    allPanels=data.panels||[];
+    renderPanels();
+    const done=allPanels.filter(p=>p.done).length;
+    $('shotsCnt').textContent=`${done}/${allPanels.length}`;
+  }catch(e){}
+}
+
+function renderPanels(){
+  let html='';
+  let curSec='';
+  let secIdx=0;
+  for(const p of allPanels){
+    if(p.section!==curSec){
+      if(curSec) html+='</div>'; // close previous section body
+      curSec=p.section;secIdx++;
+      const secPanels=allPanels.filter(x=>x.section===curSec);
+      const secDone=secPanels.filter(x=>x.done).length;
+      const allDone=secDone===secPanels.length;
+      html+=`<div class="sec-hdr" data-section="${curSec}" onclick="toggleSec('sec-body-${secIdx}',this)" style="cursor:pointer">
+        <span>${curSec}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="sec-cnt" id="sec-cnt-${secIdx}" data-section="${curSec}">${secDone}/${secPanels.length} ${allDone?'✓':''}</span>
+          <span class="ch" style="font-size:10px;color:var(--t3);transition:.3s">▼</span>
+        </span>
+        <div class="sec-prog" id="sec-prog-${secIdx}" data-section="${curSec}"><div class="sec-prog-fill" id="sec-prog-fill-${secIdx}"></div></div>
+      </div>
+      <div class="col-b open" id="sec-body-${secIdx}">`;
+    }
+    const done=p.done;
+    const imgSrc=done?`/api/preview/${p.id}`:'';
+    const badge=p.type==='noir'?'badge-noir':'badge-fern';
+    html+=`<div class="panel ${done?'done':''}" id="panel-${p.id}" data-section="${p.section}">
+      <div class="panel-img" ${done?`onclick="openPv('${imgSrc}','${p.id}')"`:''}">
+        ${done?`<img src="${imgSrc}" loading="lazy">`:`<div class="empty-shot"><div class="big">◇</div><span style="font-size:10px;font-family:'Geist Mono',monospace">${p.id}</span></div>`}
+      </div>
+      <div class="panel-body">
+        <div class="panel-top">
+          <span class="panel-id">${p.id}</span>
+          <span class="badge ${badge}">${p.type}</span>
+          ${p.chars.length?`<span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--t3)">@${p.chars[0]}</span>`:''}
+        </div>
+        ${p.vo?`<div class="panel-vo" onclick="this.classList.toggle('expanded')" style="cursor:pointer">"${p.vo}"</div>`:''}
+        <div class="panel-actions">
+          <button class="p-btn ${done?'redo':'gen'}" id="btn-${p.id}" onclick="genOne('${p.id}')">${done?'Redo':'Generate'}</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if(curSec) html+='</div>'; // close last section body
+  $('panelList').innerHTML=html;
+}
+
+function toggleSec(id,el){
+  const body=$(id);if(!body)return;
+  body.classList.toggle('open');
+  const ch=el.querySelector('.ch');
+  if(ch)ch.style.transform=body.classList.contains('open')?'':'rotate(-90deg)';
+}
+
+// Generate single panel
+async function genOne(pid){
+  const btn=$('btn-'+pid);
+  if(!btn)return;
+  const key=$('apiKey').value;
+  if(!key){toast('Enter API key first','error');return}
+
+  btn.className='p-btn loading';btn.textContent='Generating';
+  $('dot').classList.add('on');$('statusText').textContent='Generating';
+
+  try{
+    const res=await fetch('/api/generate_one',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({panel_id:pid,api_key:key})
+    });
+    const data=await res.json();
+    if(data.error){
+      toast(`${pid}: ${data.error}`,'error');
+      btn.className='p-btn gen';btn.textContent='Retry';
+    } else {
+      const score = data.consistency_score || 0;
+      const scoreColor = score >= 80 ? 'var(--m)' : score >= 60 ? 'var(--a)' : 'var(--r)';
+      const scoreLabel = score >= 80 ? '✓' : score >= 60 ? '~' : '✗';
+      toast(`${pid} done ${scoreLabel} ${score ? `(${score}/100)` : ''}`);
+      // Refresh just this panel
+      const card=$('panel-'+pid);
+      if(card){
+        const imgDiv=card.querySelector('.panel-img');
+        imgDiv.innerHTML=`<img src="/api/preview/${pid}?t=${Date.now()}" loading="lazy">`;
+        imgDiv.onclick=()=>openPv(`/api/preview/${pid}?t=${Date.now()}`,pid);
+        card.classList.add('done');
+        // Show score badge
+        if(score && score < 100){
+          const scoreBadge = card.querySelector('.score-badge');
+          if(scoreBadge) scoreBadge.remove();
+          const badge = document.createElement('span');
+          badge.className='score-badge';
+          badge.style.cssText=`font-family:'Geist Mono',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:${scoreColor}22;color:${scoreColor};margin-left:auto`;
+          badge.textContent=`${score}/100`;
+          card.querySelector('.panel-top').appendChild(badge);
+        }
+      }
+      btn.className='p-btn redo';btn.textContent='Redo';
+      // Update count
+      const done=document.querySelectorAll('.panel.done').length;
+      $('shotsCnt').textContent=`${done}/${allPanels.length}`;
+    }
+  }catch(e){
+    toast(`Error: ${e.message}`,'error');
+    btn.className='p-btn gen';btn.textContent='Retry';
+  }
+  $('dot').classList.remove('on');$('statusText').textContent='Ready';
+}
+
+// Generate next undone
+function genNextUndone(){
+  const next=allPanels.find(p=>!p.done);
+  if(next){
+    genOne(next.id);
+    // Scroll to it
+    const el=$('panel-'+next.id);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+  } else toast('All panels generated!');
+}
+
+// Generate all in a section
+function genAllSection(){
+  // Find first section with undone panels
+  const undone=allPanels.filter(p=>!p.done);
+  if(!undone.length){toast('All done!');return}
+  const sec=undone[0].section;
+  run('scenes',sec);
+}
+
+// Load refs
+async function loadRefs(){
+  try{
+    const res=await fetch('/api/pipeline_status');
+    const d=await res.json();
+    renderCharGallery(d.chars||[]);
+    renderEnvGallery(d.envs||[]);
+    renderStyleAnchor(d.style_anchor||false);
+    const charsDone=(d.chars||[]).filter(c=>c.done).length;
+    const envsDone=(d.envs||[]).filter(e=>e.env).length;
+    $('refsCnt').textContent=`${charsDone+envsDone}`;
+  }catch(e){}
+}
+
+// Style anchor
+async function genStyleAnchor(){
+  const key=$('apiKey').value;
+  if(!key){toast('Enter API key','error');return}
+  toast('Generating style anchor...');
+  try{
+    const res=await fetch('/api/gen_style_anchor',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({api_key:key})
+    });
+    const data=await res.json();
+    if(data.error){toast(data.error,'error')}
+    else{toast('Style anchor done ✓');loadRefs()}
+  }catch(e){toast(`Error: ${e.message}`,'error')}
+}
+
+function renderStyleAnchor(exists){
+  const s=$('styleStatus');
+  const g=$('styleGal');
+  if(exists){
+    s.textContent='✓';s.style.color='var(--m)';
+    g.innerHTML=`<div class="gal-item" style="aspect-ratio:16/9;grid-column:span 2;position:relative">
+      <img src="/api/ref/style_anchor/style_key" loading="lazy" onclick="openPv('/api/ref/style_anchor/style_key','Style Anchor')">
+      <div class="gl">Style Key — L9</div>
+      <div style="position:absolute;top:4px;right:4px;display:flex;gap:3px">
+        <button onclick="event.stopPropagation();redoRef('style_anchor','style_key')" style="background:var(--rbg);border:1px solid rgba(248,113,113,.2);color:var(--r);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">↻</button>
+        <button onclick="event.stopPropagation();editRef('style_anchor','style_key')" style="background:var(--vbg);border:1px solid rgba(167,139,250,.2);color:var(--v);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">✏</button>
+      </div>
+    </div>`;
+  } else {
+    s.textContent='—';s.style.color='var(--t3)';
+    g.innerHTML=`<div class="gal-item empty" style="aspect-ratio:16/9">Not generated</div>`;
+  }
+}
+
+function renderCharGallery(chars){
+  if(!chars.length)return;
+  $('charCount').textContent=`${chars.filter(c=>c.done).length}/${chars.length}`;
+  $('charGal').innerHTML=chars.map(c=>{
+    if(c.done) return `<div class="gal-item" style="aspect-ratio:16/9;position:relative">
+      <img src="/api/ref/char/${c.id}" loading="lazy" onclick="openPv('/api/ref/char/${c.id}','@${c.id} — ${c.name}')">
+      <div class="gl">@${c.id}</div>
+      <div style="position:absolute;top:4px;right:4px;display:flex;gap:3px">
+        <button onclick="event.stopPropagation();redoRef('char','${c.id}')" style="background:var(--rbg);border:1px solid rgba(248,113,113,.2);color:var(--r);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">↻</button>
+        <button onclick="event.stopPropagation();editRef('char','${c.id}')" style="background:var(--vbg);border:1px solid rgba(167,139,250,.2);color:var(--v);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">✏</button>
+      </div>
+    </div>`;
+    return `<div class="gal-item empty" style="aspect-ratio:16/9">@${c.id}</div>`;
+  }).join('');
+}
+
+function renderEnvGallery(envs){
+  if(!envs.length)return;
+  $('envCount').textContent=`${envs.filter(e=>e.env).length}/${envs.length}`;
+  $('envGal').innerHTML=envs.map(e=>{
+    let h=e.env?`<div class="gal-item" style="position:relative">
+      <img src="/api/ref/env/${e.id}" loading="lazy" onclick="openPv('/api/ref/env/${e.id}','${e.name}')">
+      <div class="gl">${e.name}</div>
+      <div style="position:absolute;top:4px;right:4px;display:flex;gap:3px">
+        <button onclick="event.stopPropagation();redoRef('env','${e.id}')" style="background:var(--rbg);border:1px solid rgba(248,113,113,.2);color:var(--r);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">↻</button>
+        <button onclick="event.stopPropagation();editRef('env','${e.id}')" style="background:var(--vbg);border:1px solid rgba(167,139,250,.2);color:var(--v);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">✏</button>
+      </div>
+    </div>`:`<div class="gal-item empty">${e.name}</div>`;
+    h+=e.master?`<div class="gal-item" style="position:relative">
+      <img src="/api/ref/master/${e.id}" loading="lazy" onclick="openPv('/api/ref/master/${e.id}','${e.name} ★')">
+      <div class="gl">${e.name} ★</div>
+      <div style="position:absolute;top:4px;right:4px;display:flex;gap:3px">
+        <button onclick="event.stopPropagation();redoRef('master','${e.id}')" style="background:var(--rbg);border:1px solid rgba(248,113,113,.2);color:var(--r);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">↻</button>
+        <button onclick="event.stopPropagation();editRef('master','${e.id}')" style="background:var(--vbg);border:1px solid rgba(167,139,250,.2);color:var(--v);border-radius:6px;padding:2px 6px;font-size:8px;font-family:'Geist Mono',monospace;cursor:pointer">✏</button>
+      </div>
+    </div>`:`<div class="gal-item empty">${e.name} ★</div>`;
+    return h;
+  }).join('');
+}
+
+// Redo a single reference image
+async function redoRef(type,id){
+  const key=$('apiKey').value;
+  if(!key){toast('Enter API key','error');return}
+  toast(`Regenerating ${type}/${id}...`);
+  try{
+    const res=await fetch('/api/redo_ref',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ref_type:type,ref_id:id,api_key:key})
+    });
+    const data=await res.json();
+    if(data.error){toast(data.error,'error')}
+    else{toast(`${type}/${id} done ✓`);loadRefs()}
+  }catch(e){toast(`Error: ${e.message}`,'error')}
+}
+
+// Edit ref with custom prompt (style auto-injected by engine)
+function editRef(type,id){
+  const prompt=window.prompt(`Custom prompt for ${type}/${id}:\n(Style rules auto-applied — just describe what you want)`);
+  if(!prompt)return;
+  doEditRef(type,id,prompt);
+}
+async function doEditRef(type,id,customPrompt){
+  const key=$('apiKey').value;
+  if(!key){toast('Enter API key','error');return}
+  toast(`Editing ${type}/${id}...`);
+  try{
+    const res=await fetch('/api/edit_ref',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ref_type:type,ref_id:id,api_key:key,custom_prompt:customPrompt})
+    });
+    const data=await res.json();
+    if(data.error){toast(data.error,'error')}
+    else{toast(`${type}/${id} done ✓`);loadRefs()}
+  }catch(e){toast(`Error: ${e.message}`,'error')}
+}
+
+// Settings
+async function saveCfg(){
+  await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({api_key:$('apiKey').value,style:$('style').value,resolution:$('resolution').value,aspect_ratio:$('ar').value,model:$('model').value})});
+}
+
+// Batch run
+async function run(step,section){
+  if(isRunning){toast('Already running','error');return}
+  if(!$('apiKey').value){toast('Enter API key','error');return}
+  await saveCfg();
+  const body={api_key:$('apiKey').value};if(section)body.section=section;
+  const res=await fetch(`/api/run/${step}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await res.json();
+  if(data.error){toast(data.error,'error');return}
+  isRunning=true;currentRunStep=step;setRunning(true);
+  toast(`Running: ${step.replace(/_/g,' ')}`);
+  startSSE();
+}
+async function stopRun(){await fetch('/api/stop',{method:'POST'});toast('Stopping...')}
+function setRunning(v){
+  isRunning=v;$('dot').classList.toggle('on',v);$('statusText').textContent=v?'Generating':'Ready';
+  $('batchStop').classList.toggle('hidden',!v);
+  $('shotsStop').classList.toggle('hidden',!v);
+  $('progFill').classList.toggle('on',v);
+}
+
+// SSE
+let evtSource=null,sseRetries=0,_lastGenPanel='';
+function startSSE(){
+  if(evtSource)evtSource.close();sseRetries=0;
+  evtSource=new EventSource('/api/stream');
+  evtSource.onmessage=e=>{
+    sseRetries=0;const d=JSON.parse(e.data);
+    if(d.type==='log'){
+      addLog(d.msg,d.tag);
+      // Live update: when a panel completes, update its card immediately
+      if(d.tag==='ok' && d.msg.startsWith('OK →')){
+        const pid=d.msg.replace('OK → ','').trim();
+        liveUpdatePanel(pid);
+      }
+    }
+    if(d.type==='progress'){
+      const pct=d.total?(d.done/d.total*100):0;
+      $('progFill').style.width=pct+'%';
+      $('progText').textContent=d.total?`${d.done}/${d.total} · ${Math.round(pct)}%`:'';
+
+      // Per-section progress bars
+      if(d.section_progress){
+        document.querySelectorAll('.sec-prog-fill').forEach(el=>{
+          const secName=el.parentElement.dataset.section;
+          if(secName && d.section_progress[secName]){
+            const sp=d.section_progress[secName];
+            const spPct=sp.total?(sp.done/sp.total*100):0;
+            el.style.width=spPct+'%';
+          }
+        });
+        // Update section counters live
+        document.querySelectorAll('[id^="sec-cnt-"]').forEach(el=>{
+          const secName=el.dataset.section;
+          if(secName && d.section_progress[secName]){
+            const sp=d.section_progress[secName];
+            const allDone=sp.done===sp.total;
+            el.textContent=`${sp.done}/${sp.total} ${allDone?'✓':''}`;
+          }
+        });
+      }
+
+      // Highlight current section header
+      document.querySelectorAll('.sec-hdr').forEach(el=>{
+        const isActive=el.dataset.section===d.current_section;
+        const badge=el.querySelector('.sec-active');
+        if(isActive && !badge){
+          const s=document.createElement('span');s.className='sec-active';s.textContent='● generating';
+          el.querySelector('span')?.after(s);
+        } else if(!isActive && badge){
+          badge.remove();
+        }
+      });
+
+      // Generating pulse on current panel + auto-scroll
+      const curPanel=d.current_panel||'';
+      if(curPanel!==_lastGenPanel){
+        // Remove old pulse
+        if(_lastGenPanel){
+          const old=$('panel-'+_lastGenPanel);
+          if(old)old.classList.remove('generating');
+        }
+        // Add new pulse
+        if(curPanel){
+          const card=$('panel-'+curPanel);
+          if(card){
+            card.classList.add('generating');
+            // Auto-scroll to generating panel (only if on shots tab)
+            if(activeTab==='shots'){
+              card.scrollIntoView({behavior:'smooth',block:'center'});
+            }
+          }
+        }
+        _lastGenPanel=curPanel;
+      }
+
+      if(!d.running&&isRunning){
+        // Clean up generating state
+        if(_lastGenPanel){const old=$('panel-'+_lastGenPanel);if(old)old.classList.remove('generating');_lastGenPanel=''}
+        document.querySelectorAll('.sec-active').forEach(el=>el.remove());
+        setRunning(false);
+        if(currentRunStep==='export'){toast('Export ready!');setTimeout(()=>{window.location.href='/api/export_html'},500)}
+        else{toast('Done ✓');loadPanels();loadRefs();switchTab('shots')}
+        currentRunStep='';evtSource.close();
+      }
+    }
+  };
+  evtSource.onerror=()=>{
+    evtSource.close();
+    if(isRunning&&sseRetries<10){sseRetries++;setTimeout(startSSE,2000)}
+  };
+}
+
+function liveUpdatePanel(pid){
+  const card=$('panel-'+pid);
+  if(card){
+    const imgDiv=card.querySelector('.panel-img');
+    if(imgDiv){
+      imgDiv.innerHTML=`<img src="/api/preview/${pid}?t=${Date.now()}" loading="lazy">`;
+      imgDiv.onclick=()=>openPv(`/api/preview/${pid}?t=${Date.now()}`,pid);
+    }
+    card.classList.add('done');
+    const btn=$('btn-'+pid);
+    if(btn){btn.className='p-btn redo';btn.textContent='Redo'}
+    // Update count
+    const done=document.querySelectorAll('.panel.done').length;
+    $('shotsCnt').textContent=`${done}/${allPanels.length}`;
+    // Mark panel done in allPanels array
+    const p=allPanels.find(x=>x.id===pid);
+    if(p)p.done=true;
+  }
+}
+
+function addLog(msg,tag){
+  const el=$('log');if(!el)return;
+  const d=document.createElement('div');d.className=tag||'info';d.textContent=msg;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+
+// Drag
+const dz=$('dropZone');
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>ev.preventDefault()));
+dz.addEventListener('drop',e=>{e.preventDefault();$('fileInput').files=e.dataTransfer.files;$('fileInput').dispatchEvent(new Event('change'))});
+
+// Auto-load on page load if storyboard already uploaded
+setTimeout(()=>{fetch('/api/panels').then(r=>r.json()).then(d=>{
+  if(d.panels&&d.panels.length){allPanels=d.panels;renderPanels();$('tabSection').classList.remove('hidden');$('shotsTab').classList.remove('hidden');
+    const done=allPanels.filter(p=>p.done).length;$('shotsCnt').textContent=`${done}/${allPanels.length}`;loadRefs()}
+}).catch(()=>{})},500);
+</script>
+</body>
+</html>
