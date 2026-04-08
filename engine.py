@@ -1,16 +1,17 @@
 """
-STORYBOARD VISUAL ENGINE v10.5
+STORYBOARD VISUAL ENGINE v10.6
 13-Layer Consistency Engine -- Project-agnostic
 All content (characters, environments) loaded from JSX storyboard files.
 
 CHANGELOG:
+- v10.6: Audit fixes — parse edit/text/source/audio fields, alias blocklist,
+         char ID collision fix, word-boundary detection, 429 retry with refs,
+         full pipeline L13 params, log cap, export metadata.
 - v10.5: 2 presets only (Noir Faceless + Cinematic Real Faces).
          Character detection bug fixes. Style-aware character views.
          Documentary + Movie director instruction docs.
 - v10.4: Layer 13 Cinematic Director AI integration into build_prompt().
          Live preview + per-section progress in UI. Version bump.
-- v10.3: Smart detection, aggressive auto-redo, body type injection,
-         section color palette lock, panel-to-panel continuity scoring.
 """
 
 import os, re, json, time, sys, base64, threading, shutil
@@ -328,6 +329,14 @@ def _parse_panel_object(ptext, sec_id, sec_name):
     if m:
         p['tr'] = m.group(1)
 
+    m = re.search(r'(?<!\w)edit:\s*"([^"]+)"', ptext)
+    if m:
+        p['edit'] = m.group(1)
+
+    m = re.search(r'(?<!\w)text:\s*"((?:[^"\\]|\\.)*)"', ptext)
+    if m:
+        p['text'] = m.group(1)
+
     m = re.search(r'music:\s*"([^"]+)"', ptext)
     if m:
         p['m'] = m.group(1)
@@ -335,6 +344,38 @@ def _parse_panel_object(ptext, sec_id, sec_name):
     m = re.search(r'vo:\s*"((?:[^"\\]|\\.)*)"', ptext)
     if m:
         p['vo'] = m.group(1)
+
+    # Audio field (Movie mode: voice actor + SFX)
+    am = re.search(r'audio:\s*\{([^}]+)\}', ptext)
+    if am:
+        atext = am.group(1)
+        vm = re.search(r'voice:\s*"([^"]*)"', atext)
+        sfxm = re.search(r'sfx:\s*"((?:[^"\\]|\\.)*)"', atext)
+        if vm:
+            p['voice'] = vm.group(1)
+        if sfxm:
+            p['sfx'] = sfxm.group(1)
+
+    # Source field (Media panels: footage sourcing notes)
+    srcm = re.search(r'source:\s*\{', ptext)
+    if srcm:
+        # Extract the source block using brace counting
+        src_start = srcm.end()
+        depth = 1
+        pos = src_start
+        while pos < len(ptext) and depth > 0:
+            if ptext[pos] == '{': depth += 1
+            elif ptext[pos] == '}': depth -= 1
+            pos += 1
+        src_text = ptext[src_start:pos-1]
+        tm = re.search(r'type:\s*"([^"]+)"', src_text)
+        dm = re.search(r'description:\s*"((?:[^"\\]|\\.)*)"', src_text)
+        sm = re.search(r'search:\s*"((?:[^"\\]|\\.)*)"', src_text)
+        fm = re.search(r'fallback:\s*"((?:[^"\\]|\\.)*)"', src_text)
+        p['source_type'] = tm.group(1) if tm else ""
+        p['source_desc'] = dm.group(1) if dm else ""
+        p['source_search'] = sm.group(1) if sm else ""
+        p['source_fallback'] = fm.group(1) if fm else ""
 
     gm = re.search(r'gemini:\s*\{([^}]+)\}', ptext)
     if gm:
@@ -480,32 +521,53 @@ def auto_extract_characters(text):
 
 
 def _make_char_id(name):
-    """Generate a short character ID from name. Project-agnostic."""
+    """Generate a unique character ID from full name. Project-agnostic."""
     name_lower = name.lower().strip()
     skip_words = {"the", "and", "of", "da", "de", "dos", "das", "del", "van", "von", "di"}
     words = re.sub(r'[^a-z0-9\s]', '', name_lower).split()
-    for w in words:
-        if w not in skip_words and len(w) > 2:
-            return w[:8]
-    return re.sub(r'[^a-z0-9]', '', name_lower)[:8] or "char"
+    significant = [w for w in words if w not in skip_words and len(w) > 1]
+    if len(significant) >= 2:
+        # Use first + last significant word to avoid collisions
+        return f"{significant[0][:6]}_{significant[-1][:6]}"
+    elif significant:
+        return significant[0][:12]
+    return re.sub(r'[^a-z0-9]', '', name_lower)[:12] or "char"
+
+
+_ALIAS_BLOCKLIST = {
+"the", "and", "of", "van", "von", "de", "da", "del", "di", "dos",
+"key", "keys", "king", "camp", "guard", "money", "gold", "diamond",
+"vault", "safe", "lock", "door", "gate", "alarm", "sensor", "camera",
+"police", "agent", "boss", "man", "woman", "old", "young", "big",
+"fast", "slow", "quick", "smart", "speed", "speedy", "monster",
+"genius", "master", "angel", "ghost", "shadow", "phantom",
+"black", "white", "brown", "green", "jones", "banks", "cross",
+"stone", "woods", "house", "north", "south", "front", "floor",
+}
 
 
 def _extract_aliases(name, desc):
     """Generate detection aliases from character name and description."""
     aliases = []
+    # Full name is always an alias
+    full_name = name.strip()
+    if full_name:
+        aliases.append(full_name)
+
     parts = re.split(r'[\s\(\)]+', name)
     for p in parts:
         p = p.strip()
-        if len(p) > 2 and p.lower() not in {"the", "and"}:
+        # Single words from name: 5+ letters AND not in blocklist
+        if len(p) >= 5 and p.lower() not in _ALIAS_BLOCKLIST:
             aliases.append(p)
 
     if "(" in name:
         before = name.split("(")[0].strip()
         inside = name.split("(")[1].rstrip(")")
-        if before:
+        if before and before.lower() not in _ALIAS_BLOCKLIST:
             aliases.append(before)
         for w in inside.split():
-            if len(w) > 3:
+            if len(w) >= 5 and w.lower() not in _ALIAS_BLOCKLIST:
                 aliases.append(w)
 
     phrases = re.split(r'[,\.\;\-]+', desc)
@@ -513,12 +575,16 @@ def _extract_aliases(name, desc):
         phrase = phrase.strip().lower()
         words = phrase.split()
         if any(w in _CLOTHING_WORDS or w in _ROLE_WORDS for w in words) and 2 <= len(words) <= 6:
-            aliases.append(phrase)
+            # Skip phrases that are just blocklist words
+            if not all(w in _ALIAS_BLOCKLIST or w in _ROLE_WORDS for w in words):
+                aliases.append(phrase)
 
     desc_lower = re.sub(r'[^\w\s]', ' ', desc.lower())
     desc_words = desc_lower.split()
     for i, w in enumerate(desc_words):
         if w in _ROLE_WORDS or w in _CLOTHING_WORDS:
+            if w.lower() in _ALIAS_BLOCKLIST:
+                continue
             if i > 0:
                 combo = f"{desc_words[i-1]} {w}"
                 if len(combo) > 5:
@@ -536,7 +602,7 @@ def _extract_aliases(name, desc):
     unique = []
     for a in aliases:
         key = a.lower().strip()
-        if key not in seen and len(key) > 2:
+        if key not in seen and len(key) > 2 and key not in _ALIAS_BLOCKLIST:
             seen.add(key)
             unique.append(a.strip())
     return unique
@@ -682,13 +748,16 @@ def get_active_master_shots():
 # ═══════════════════════════════════════════════════════════
 
 def detect_characters(prompt, vo=""):
-    """Detect characters in prompt. Returns list of char IDs."""
+    """Detect characters in prompt. Returns list of char IDs.
+    Uses word-boundary matching to avoid false positives."""
     text = ((prompt or "") + " " + (vo or "")).lower()
     chars = get_active_characters()
     found = []
     for cid, c in chars.items():
         for alias in c["alias"]:
-            if alias.lower() in text:
+            # Word boundary match to avoid substring false positives
+            pattern = r'\b' + re.escape(alias.lower()) + r'\b'
+            if re.search(pattern, text):
                 if cid not in found:
                     found.append(cid)
                 break
@@ -957,7 +1026,14 @@ def gen_chat_section(client, section_name, panels_data, callback=None):
                     adaptive_delay.rate_limited()
                     time.sleep(30)
                     try:
-                        contents2 = [pd["prompt"]]
+                        # Retry with full refs to maintain consistency layers
+                        contents2 = []
+                        for rp in pd.get("refs", []):
+                            if Path(rp).exists():
+                                contents2.append(_resize_for_api(Image.open(rp)))
+                            if len(contents2) >= 3:
+                                break
+                        contents2.append(pd["prompt"])
                         resp2 = chat.send_message(contents2, config=get_config())
                         img2 = extract_image(resp2)
                         if img2:

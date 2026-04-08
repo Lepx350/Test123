@@ -1,5 +1,5 @@
 """
-Storyboard Visual Engine v10.5 — Web Edition
+Storyboard Visual Engine v10.6 — Web Edition
 Deploy to Railway.app or run locally.
 Phone: open browser → use from anywhere.
 """
@@ -37,6 +37,8 @@ state = {
 
 def log(msg, tag="info"):
     state["log"].append({"msg": msg, "tag": tag, "ts": time.time()})
+    if len(state["log"]) > 2000:
+        state["log"] = state["log"][-1000:]
 
 def prog(done, total):
     state["progress"] = done
@@ -269,6 +271,12 @@ def list_panels():
             "chars": char_names,
             "env": state["env_map"].get(pid, ""),
             "done": done,
+            "edit": p.get("edit", ""),
+            "text": p.get("text", ""),
+            "voice": p.get("voice", ""),
+            "sfx": p.get("sfx", ""),
+            "source_type": p.get("source_type", ""),
+            "source_search": p.get("source_search", ""),
         })
     return jsonify(panels=result)
 
@@ -837,14 +845,24 @@ def run_full_pipeline(key):
             section_order = list(dict.fromkeys(get_section(p) for p in all_gen))
 
             sections = {}
+            section_panel_idx = {}
+            section_panel_totals = {}
+            # Pre-count panels per section
+            for p in all_gen:
+                sec = get_section(p)
+                section_panel_totals[sec] = section_panel_totals.get(sec, 0) + 1
+
             for p in all_gen:
                 sec = get_section(p)
                 if sec not in sections: sections[sec] = []
+                if sec not in section_panel_idx: section_panel_idx[sec] = 0
                 pid = p['id']
                 all_chars = state["char_map"].get(pid, [])
                 env_id = state["env_map"].get(pid); asset = get_asset_type(p)
                 fname = f"{p.get('f', pid)}.png"
                 primary_char = all_chars[0] if all_chars else None
+                p_idx = section_panel_idx[sec]
+                section_panel_idx[sec] += 1
 
                 # ── Layer 8: ALL character sheet refs ──
                 refs = []
@@ -868,8 +886,13 @@ def run_full_pipeline(key):
                     if bridge and bridge not in refs:
                         refs.append(bridge)
 
-                # ── Layer 8: Pass all chars to prompt builder ──
-                prompt = build_prompt(p, primary_char, env_id, all_chars=all_chars)
+                # ── Layer 13: Pass section context for cinematography ──
+                prompt = build_prompt(
+                    p, primary_char, env_id, all_chars=all_chars,
+                    section_name=sec, panel_index=p_idx,
+                    section_total=section_panel_totals.get(sec, 20),
+                    is_first_in_section=(p_idx == 0)
+                )
                 sections[sec].append({
                     "id": pid, "prompt": prompt, "refs": refs,
                     "output": str(out / "scenes" / fname),
@@ -1190,7 +1213,7 @@ def run_export():
 .cam{{background:#0f766e15;border:1px solid #0f766e33;border-radius:6px;padding:8px 12px;margin-top:6px;font-size:11px;color:#2dd4bf}}
 </style></head><body>
 <div class="header"><div class="title">VISUAL PRODUCTION BIBLE</div>
-<div class="sub">v10.5 · {datetime.now().strftime('%Y-%m-%d %H:%M')} · {style_name} · {len(state["panels"])} panels · {img_count} images</div></div>'''
+<div class="sub">v10.6 · {datetime.now().strftime('%Y-%m-%d %H:%M')} · {style_name} · {len(state["panels"])} panels · {img_count} images</div></div>'''
 
         for sec in sections:
             html += f'<div class="section-hdr">{sec} ({len(sec_dict[sec])})</div>'
@@ -1205,9 +1228,20 @@ def run_export():
                     img_html = f'<img src="data:image/png;base64,{b64}" alt="{pid}">'
                 else:
                     img_html = f'<div class="panel-miss">⏳ Not generated</div>'
-                html += f'<div class="panel">{img_html}<div class="body"><div class="badges"><span class="b b-id">{pid}</span><span class="b b-{asset}">{al}</span>{"<span class=\'b b-cold\'>COLD OPEN</span>" if cold else ""}</div>'
+                html += f'<div class="panel">{img_html}<div class="body"><div class="badges"><span class="b b-id">{pid}</span><span class="b b-{asset}">{al}</span>'
+                if cold:
+                    html += '<span class="b b-cold">COLD OPEN</span>'
+                edit_type = p.get("edit", "")
+                if edit_type:
+                    html += f'<span class="b" style="background:#1c2333;color:#fbbf24">{edit_type}</span>'
+                html += '</div>'
+                if p.get('text'):
+                    html += f'<div class="cam" style="border-color:#fbbf2444;color:#fbbf24">📝 {p["text"]}</div>'
                 if vo: html += f'<div class="vo">🎙 {vo}</div>'
                 if cam: html += f'<div class="cam">🎥 {cam}</div>'
+                if p.get('voice'):
+                    sfx_note = f" | SFX: {p['sfx']}" if p.get("sfx") else ""
+                    html += f'<div class="meta">🎤 Voice: {p["voice"]}{sfx_note}</div>'
                 chars = state["char_map"].get(pid, [])
                 if chars: html += f'<div class="meta">👤 {", ".join(["@"+c for c in chars])}</div>'
                 html += '</div></div>'
