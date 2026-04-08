@@ -1,5 +1,5 @@
 """
-Storyboard Visual Engine v7 — Web Edition
+Storyboard Visual Engine v10.5 — Web Edition
 Deploy to Railway.app or run locally.
 Phone: open browser → use from anywhere.
 """
@@ -1190,7 +1190,7 @@ def run_export():
 .cam{{background:#0f766e15;border:1px solid #0f766e33;border-radius:6px;padding:8px 12px;margin-top:6px;font-size:11px;color:#2dd4bf}}
 </style></head><body>
 <div class="header"><div class="title">VISUAL PRODUCTION BIBLE</div>
-<div class="sub">v7 · {datetime.now().strftime('%Y-%m-%d %H:%M')} · {style_name} · {len(state["panels"])} panels · {img_count} images</div></div>'''
+<div class="sub">v10.5 · {datetime.now().strftime('%Y-%m-%d %H:%M')} · {style_name} · {len(state["panels"])} panels · {img_count} images</div></div>'''
 
         for sec in sections:
             html += f'<div class="section-hdr">{sec} ({len(sec_dict[sec])})</div>'

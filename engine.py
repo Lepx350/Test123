@@ -1,9 +1,12 @@
 """
-STORYBOARD VISUAL ENGINE v10.4
+STORYBOARD VISUAL ENGINE v10.5
 13-Layer Consistency Engine -- Project-agnostic
 All content (characters, environments) loaded from JSX storyboard files.
 
 CHANGELOG:
+- v10.5: 2 presets only (Noir Faceless + Cinematic Real Faces).
+         Character detection bug fixes. Style-aware character views.
+         Documentary + Movie director instruction docs.
 - v10.4: Layer 13 Cinematic Director AI integration into build_prompt().
          Live preview + per-section progress in UI. Version bump.
 - v10.3: Smart detection, aggressive auto-redo, body type injection,
@@ -76,258 +79,49 @@ STYLE_PRESETS = {
 ),
 "grade": {"desat": 0.15, "teal_r": -12, "teal_g": 6, "teal_b": 15, "warm_r": 12, "warm_g": 4, "warm_b": -8, "contrast": 1.08, "vignette": 0.25, "grain": 6},
 },
-"Photorealistic Documentary": {
+"Cinematic Noir (Real Faces)": {
 "world_anchor": (
 "PERSISTENT WORLD RULES: "
-"Photorealistic photography style. Real human faces with natural expressions. "
-"Shot on ARRI Alexa Mini, Zeiss Master Prime lenses. "
-"Natural color grade, slight desaturation. "
-"Documentary cinematography -- observational, intimate, authentic. "
-"16:9 widescreen. High dynamic range. "
-"NEVER: cartoon, anime, 3D render look, plastic skin, mannequin. "
+"All human characters are photorealistic humans with natural skin, real facial features, "
+"natural hair, and authentic expressions. "
+"Dark cinematic noir aesthetic with rich color. "
+"Style reference: David Fincher, Sicario, Ozark, Mindhunter. "
+"Deep shadows with teal-blue midtones and warm amber highlights. "
+"Volumetric atmosphere, haze, dust in light beams. "
+"Film grain and vignette on every image. "
+"16:9 widescreen. Unreal Engine 5 photorealistic quality. "
+"NEVER: cartoon, anime, 2D, mannequin, plastic skin, flat lighting, featureless faces. "
 ),
 "primary": (
-"Photorealistic documentary photograph. Real human with natural skin texture and features. "
-"ARRI Alexa Mini, 35-85mm Zeiss Master Prime, shallow depth of field. "
-"Natural single-source lighting -- practical lights, window light, overhead fluorescent. "
-"Muted color palette, slight blue shadows, warm highlights. "
-"Mood: intimate, observational, journalistic. "
+"Photorealistic cinematic noir scene. "
+"Real human characters with natural skin texture, hair, and authentic expressions. "
+"Era-appropriate clothing with fabric detail. "
+"Characters in dynamic mid-action poses, never idle. "
+"Cinematic 35-85mm anamorphic lens, shallow depth of field, anamorphic bokeh. "
+"Dramatic single-source lighting with volumetric god rays, deep shadows. "
+"Teal-blue shadows, warm amber highlights. Dark cinematic color grade. "
+"Film grain, vignette. Fincher / Deakins cinematography. "
+"Mood: noir-cinematic, investigative, atmospheric. "
 ),
 "secondary": (
-"Clean photographic infographic style. "
-"Shot from above on dark surface -- objects arranged for explanation. "
-"Soft even lighting, minimal shadows. "
-"Educational, clear, premium documentary B-roll aesthetic. "
+"Dark cinematic B-roll style. "
+"Overhead or extreme close-up of objects, documents, evidence, or props. "
+"Teal-blue and amber color split lighting. "
+"Shallow depth of field, macro detail. "
+"Premium true-crime documentary aesthetic. "
+"No characters, no text in image. "
 ),
 "char_base": (
-"Photorealistic portrait photograph. Real human with natural skin, hair, and facial features. "
-"ARRI Alexa Mini, 85mm lens, f/2.0, shallow depth of field. "
-"Natural studio lighting -- soft key light, subtle fill, dark background. "
-"Muted documentary color grade. No cartoon, no 3D render look. "
+"Photorealistic cinematic portrait. "
+"Real human with natural skin texture, visible pores, stubble detail, realistic hair. "
+"Authentic facial expression, lifelike eyes. "
+"85mm anamorphic lens, f/1.8, shallow depth of field, creamy bokeh. "
+"Fincher / Deakins lighting -- dramatic single source with deep shadows. "
+"Teal-blue shadows, warm amber highlights. Dark cinematic color grade. "
+"Unreal Engine 5 quality. Film grain. "
+"No cartoon, no anime, no mannequin, no plastic skin, no featureless faces. "
 ),
-"grade": {"desat": 0.08, "teal_r": -5, "teal_g": 3, "teal_b": 8, "warm_r": 6, "warm_g": 2, "warm_b": -4, "contrast": 1.05, "vignette": 0.20, "grain": 4},
-},
-"Anime Documentary": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Japanese anime art style. 2D hand-drawn aesthetic with cel shading. "
-"Characters have expressive anime faces -- large eyes, detailed hair, emotional expressions. "
-"Backgrounds are detailed painted environments. "
-"16:9 widescreen. Studio Bones / MAPPA quality animation frames. "
-"NEVER: 3D render, photorealistic, clay, pixel art, western cartoon. "
-),
-"primary": (
-"Anime key frame illustration. Japanese animation studio quality. "
-"Dramatic anime cinematography -- dynamic angles, speed lines where appropriate. "
-"Rich painted backgrounds with atmospheric depth. "
-"Cel-shaded characters with detailed clothing and expressive body language. "
-"Dramatic anime lighting -- rim lights, color-coded shadows, lens flares. "
-"Mood: intense, cinematic, emotionally charged. "
-),
-"secondary": (
-"Anime explainer style. Clean chibi or simplified character proportions. "
-"Whiteboard or chalkboard aesthetic with hand-drawn diagrams. "
-"Soft pastel colors, clear visual hierarchy. "
-"Educational anime aesthetic -- think Cells at Work or Dr. Stone explanation scenes. "
-),
-"char_base": (
-"Anime character design sheet. Japanese animation studio quality. "
-"Full body front view and 3/4 view side by side. "
-"Detailed anime face -- distinctive eye color and shape, unique hairstyle. "
-"Era-appropriate costume with fabric detail and accessories. "
-"Clean lines, cel shading, neutral background. "
-),
-"grade": {"desat": 0.0, "teal_r": 0, "teal_g": 0, "teal_b": 0, "warm_r": 0, "warm_g": 0, "warm_b": 0, "contrast": 1.10, "vignette": 0.10, "grain": 0},
-},
-"Comic Book / Graphic Novel": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Western comic book art style. Bold ink lines, halftone dot shading. "
-"Characters have stylized but realistic proportions -- not chibi, not hyper-real. "
-"Strong blacks, limited color palette with flat colors and dramatic shadows. "
-"16:9 widescreen panel composition. DC/Marvel graphic novel quality. "
-"NEVER: anime, photorealistic, 3D render, watercolor, pixel art. "
-),
-"primary": (
-"Comic book panel illustration. Bold ink outlines, halftone dot shading. "
-"Dramatic noir-influenced composition -- deep shadows, stark contrasts. "
-"Limited color palette -- 4-5 colors per scene maximum. "
-"Dynamic poses and dramatic camera angles. "
-"Style reference: Sean Phillips, Alex Maleev, David Mazzucchelli. "
-"Mood: gritty, noir, graphic. "
-),
-"secondary": (
-"Comic book infographic panel. Blueprint aesthetic with technical cross-section views. "
-"White lines on dark blue background. Callout labels and arrows. "
-"Clean technical illustration meets comic book aesthetic. "
-),
-"char_base": (
-"Comic book character design. Bold ink outlines, flat color fills. "
-"Front view and 3/4 view side by side. "
-"Stylized but anatomically correct proportions. "
-"Distinctive silhouette and costume design. Strong shadow shapes. "
-"Halftone shading. Neutral background. Graphic novel quality. "
-),
-"grade": {"desat": 0.05, "teal_r": -8, "teal_g": 0, "teal_b": 10, "warm_r": 8, "warm_g": 2, "warm_b": -6, "contrast": 1.15, "vignette": 0.15, "grain": 3},
-},
-"Cyberpunk Neon Noir": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Cyberpunk neon noir aesthetic. Rain-soaked futuristic city. "
-"Characters have augmented cybernetic features mixed with streetwear. "
-"Dominant colors: electric blue, hot pink, toxic green neon against dark backgrounds. "
-"Holographic UI elements floating in environment. "
-"16:9 widescreen. Unreal Engine 5 quality. "
-"NEVER: daylight, cartoon, clean/sterile, natural environments. "
-),
-"primary": (
-"Cyberpunk cinematic scene. Rain-soaked streets, neon reflections on wet asphalt. "
-"Volumetric fog and atmospheric haze. Holographic advertisements in background. "
-"Cinematic 35mm anamorphic lens, extreme depth. "
-"Dominant neon blue and pink lighting with deep shadows. "
-"Blade Runner meets Ghost in the Shell meets Akira aesthetic. "
-"Mood: dystopian, noir, electric. "
-),
-"secondary": (
-"Cyberpunk holographic UI explainer. Floating translucent data visualizations. "
-"Wireframe 3D models with neon edge lighting on dark void background. "
-"Sci-fi tech aesthetic -- think Minority Report UI or Iron Man HUD. "
-),
-"char_base": (
-"Cyberpunk character design. Neon-lit portrait against dark rain-soaked backdrop. "
-"Front view and 3/4 view side by side. "
-"Streetwear mixed with cybernetic augmentations. "
-"Neon rim lighting, wet surface reflections. "
-"Detailed face with cyber-enhancements. Blade Runner 2049 aesthetic. "
-),
-"grade": {"desat": 0.0, "teal_r": -15, "teal_g": 5, "teal_b": 20, "warm_r": 15, "warm_g": -5, "warm_b": 10, "contrast": 1.12, "vignette": 0.30, "grain": 5},
-},
-"Vintage Film (70s Grain)": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"1970s film photography aesthetic. Shot on Kodak Ektachrome 64T film stock. "
-"Warm amber color cast, heavy film grain, slight lens softness. "
-"Natural available light -- practicals, tungsten, daylight through windows. "
-"Vintage clothing and environments accurate to the 1970s. "
-"16:9 widescreen. Real photography, not illustration. "
-"NEVER: digital look, sharp/clinical, modern objects, neon, anime. "
-),
-"primary": (
-"1970s documentary photograph on Kodak film stock. Heavy visible film grain. "
-"Warm amber and brown tones with faded blacks. Slight lens softness at edges. "
-"Available light only -- practical lamps, sunlight, overhead fluorescent. "
-"Period-accurate environments and wardrobe. "
-"Style reference: Alan Pakula, Sidney Lumet cinematography. "
-"Mood: paranoid, gritty, authentic. "
-),
-"secondary": (
-"1970s educational filmstrip aesthetic. Vintage overhead projector look. "
-"Faded colors, rounded corners, light leak effects. "
-"Simple diagrams with hand-drawn labels on yellowed paper. "
-),
-"char_base": (
-"1970s portrait photograph on Kodak film stock. Heavy grain, warm amber tones. "
-"Front view and 3/4 view side by side. "
-"Natural available light, shallow depth of field. "
-"Period-accurate clothing and hairstyle. "
-"Slight lens softness. Documentary portrait style. "
-),
-"grade": {"desat": 0.10, "teal_r": 5, "teal_g": -3, "teal_b": -10, "warm_r": 18, "warm_g": 8, "warm_b": -5, "contrast": 1.03, "vignette": 0.35, "grain": 12},
-},
-"Oil Painting / Classical": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Classical oil painting on canvas. Visible brushstrokes, rich impasto texture. "
-"Rembrandt and Caravaggio chiaroscuro lighting -- dramatic single source. "
-"Deep rich colors -- burnt sienna, raw umber, cadmium yellow, ultramarine blue. "
-"Gallery-quality fine art, museum-worthy composition. "
-"16:9 widescreen. Traditional oil painting medium. "
-"NEVER: digital art, photorealistic, cartoon, anime, flat colors. "
-),
-"primary": (
-"Classical oil painting on canvas. Rich impasto brushstrokes visible in texture. "
-"Chiaroscuro lighting -- single dramatic light source, deep shadow. "
-"Old master composition and color palette -- warm earth tones, deep blues. "
-"Figures have weight and presence, draped in rich fabrics. "
-"Style reference: Rembrandt, Caravaggio, Vermeer. "
-"Mood: dramatic, timeless, gravitas. "
-),
-"secondary": (
-"Technical illustration in old master drawing style. "
-"Sepia ink on parchment paper. Leonardo da Vinci notebook aesthetic. "
-"Cross-section diagrams with handwritten labels. Aged paper texture. "
-),
-"char_base": (
-"Classical oil portrait painting. Rich brushwork, canvas texture visible. "
-"Front view and 3/4 view side by side. "
-"Chiaroscuro lighting -- dramatic single source. "
-"Deep rich earth tone palette. Gallery-worthy composition. "
-"Old master portrait style -- Rembrandt, Caravaggio influence. "
-),
-"grade": {"desat": 0.05, "teal_r": 0, "teal_g": -5, "teal_b": -8, "warm_r": 15, "warm_g": 8, "warm_b": -3, "contrast": 1.06, "vignette": 0.30, "grain": 2},
-},
-"Watercolor / Storybook": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Delicate watercolor painting on textured paper. Visible paper grain and water blooms. "
-"Soft diffused edges, subtle color bleeding between shapes. "
-"Pastel and muted color palette -- soft blues, warm pinks, sage greens, cream. "
-"Gentle and contemplative mood. Children's book illustration quality. "
-"16:9 widescreen. Traditional watercolor medium. "
-"NEVER: photorealistic, harsh shadows, neon colors, anime, digital look. "
-),
-"primary": (
-"Watercolor illustration on textured cold-pressed paper. "
-"Visible paper grain, soft wet-on-wet color bleeds, delicate dry brush details. "
-"Soft diffused natural lighting -- no harsh shadows. "
-"Muted pastel palette with occasional deeper accent colors. "
-"Style reference: Shaun Tan, Jon Klassen, Beatrix Potter. "
-"Mood: gentle, contemplative, melancholic beauty. "
-),
-"secondary": (
-"Watercolor diagram on cream paper. Soft hand-painted labels and arrows. "
-"Botanical illustration precision meets watercolor softness. "
-"Educational diagram with artistic beauty. Aged paper texture. "
-),
-"char_base": (
-"Watercolor character illustration on textured paper. "
-"Front view and 3/4 view side by side. "
-"Soft edges, visible paper grain, subtle color bleeding. "
-"Gentle muted palette. Delicate brushwork. "
-"Children's book illustration quality. Cream paper background. "
-),
-"grade": {"desat": 0.0, "teal_r": 0, "teal_g": 2, "teal_b": 5, "warm_r": 5, "warm_g": 3, "warm_b": 0, "contrast": 1.02, "vignette": 0.10, "grain": 0},
-},
-"Clay / Stop Motion": {
-"world_anchor": (
-"PERSISTENT WORLD RULES: "
-"Claymation stop-motion animation style. Characters and environments made of clay and plasticine. "
-"Visible fingerprints and tool marks on surfaces. Miniature practical sets. "
-"Warm studio lighting with soft shadows. Slightly textured, handmade quality. "
-"16:9 widescreen. Laika Studios / Aardman quality. "
-"NEVER: photorealistic, anime, flat 2D, digital smooth surfaces. "
-),
-"primary": (
-"Claymation stop-motion scene. Characters sculpted from plasticine clay. "
-"Miniature practical set with handcrafted props and environments. "
-"Visible fingerprints and sculpting tool marks on all surfaces. "
-"Warm studio lighting, soft shadows, shallow depth of field from macro lens. "
-"Tilt-shift miniature effect. Coraline / Kubo quality. "
-"Mood: tactile, handcrafted, charming but slightly eerie. "
-),
-"secondary": (
-"Claymation diorama cutaway. Miniature cross-section model on turntable. "
-"Clay and wire armature visible in educational explainer style. "
-"Warm studio lighting, clean presentation. "
-),
-"char_base": (
-"Claymation character design. Sculpted plasticine clay figure. "
-"Front view and 3/4 view side by side on miniature turntable. "
-"Visible fingerprints, handmade texture. Wire armature poseable joints. "
-"Warm studio lighting. Macro lens shallow depth of field. "
-"Laika Studios quality -- Coraline, Kubo aesthetic. "
-),
-"grade": {"desat": 0.0, "teal_r": 0, "teal_g": 2, "teal_b": 0, "warm_r": 10, "warm_g": 6, "warm_b": 0, "contrast": 1.04, "vignette": 0.15, "grain": 2},
+"grade": {"desat": 0.10, "teal_r": -12, "teal_g": 6, "teal_b": 15, "warm_r": 12, "warm_g": 4, "warm_b": -8, "contrast": 1.12, "vignette": 0.25, "grain": 6},
 },
 }
 
@@ -664,11 +458,17 @@ def auto_extract_characters(text):
         desc = desc_m.group(1)
         cid = _make_char_id(name)
         aliases = _extract_aliases(name, desc)
-        base_desc = desc.split(". Mannequin: ")[-1] if ". Mannequin: " in desc else desc
+        base_desc = desc.split(". Mannequin: ")[0] if ". Mannequin: " in desc else desc
+        if base_desc and not base_desc.endswith("."):
+            base_desc += "."
+        # Style-aware skin line: check if active preset is mannequin-based
+        _anchor = active_preset.get("world_anchor", "").lower()
+        _is_mannequin = any(phrase in _anchor for phrase in ["faceless mannequin", "are faceless", "smooth mannequin"])
+        _skin_line = "Light-toned smooth mannequin skin." if _is_mannequin else "Natural skin texture, realistic features."
         views = {
-            "front": f"CHARACTER REFERENCE -- FRONT VIEW. {base_desc} Light-toned smooth mannequin skin. Standing straight.",
-            "three_quarter": f"CHARACTER REFERENCE -- 3/4 VIEW. {base_desc} Light-toned smooth mannequin skin. Slight turn.",
-            "action": f"CHARACTER REFERENCE -- ACTION POSE. {base_desc} Light-toned smooth mannequin skin. In action.",
+            "front": f"CHARACTER REFERENCE -- FRONT VIEW. {base_desc} {_skin_line} Standing straight.",
+            "three_quarter": f"CHARACTER REFERENCE -- 3/4 VIEW. {base_desc} {_skin_line} Slight turn.",
+            "action": f"CHARACTER REFERENCE -- ACTION POSE. {base_desc} {_skin_line} In action.",
         }
         extracted[cid] = {
             "name": name,
