@@ -170,7 +170,7 @@ body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--
 <div class="hdr">
   <div class="hdr-i">S</div>
   <div><h1>Storyboard Engine</h1><small>v10.6 · cloud · L1-L13</small></div>
-  <div class="hdr-r"><span id="statusText">Ready</span><div class="dot" id="dot"></div></div>
+  <div class="hdr-r"><button id="forceResetBtn" class="hidden" onclick="forceReset()" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--r);border-radius:6px;padding:2px 8px;font-size:9px;font-family:inherit;cursor:pointer;margin-right:8px">⟳ Reset</button><span id="statusText">Ready</span><div class="dot" id="dot"></div></div>
 </div>
 
 <div class="app">
@@ -589,7 +589,7 @@ async function saveCfg(){
 
 // Batch run
 async function run(step,section){
-  if(isRunning){toast('Already running','error');return}
+  if(isRunning){toast('Pipeline running. Stop it first or wait.','error');return}
   if(!$('apiKey').value){toast('Enter API key','error');return}
   await saveCfg();
   const body={api_key:$('apiKey').value};if(section)body.section=section;
@@ -601,10 +601,17 @@ async function run(step,section){
   startSSE();
 }
 async function stopRun(){await fetch('/api/stop',{method:'POST'});toast('Stopping...')}
+async function forceReset(){
+  await fetch('/api/force_reset',{method:'POST'});
+  isRunning=false;setRunning(false);
+  toast('State reset. Ready.','ok');
+  setTimeout(()=>location.reload(),500);
+}
 function setRunning(v){
   isRunning=v;$('dot').classList.toggle('on',v);$('statusText').textContent=v?'Generating':'Ready';
   $('batchStop').classList.toggle('hidden',!v);
   $('shotsStop').classList.toggle('hidden',!v);
+  $('forceResetBtn').classList.add('hidden');
   $('progFill').classList.toggle('on',v);
 }
 
@@ -736,6 +743,28 @@ setTimeout(()=>{fetch('/api/panels').then(r=>r.json()).then(d=>{
   if(d.panels&&d.panels.length){allPanels=d.panels;renderPanels();$('tabSection').classList.remove('hidden');$('shotsTab').classList.remove('hidden');
     const done=allPanels.filter(p=>p.done).length;$('shotsCnt').textContent=`${done}/${allPanels.length}`;loadRefs()}
 }).catch(()=>{})},500);
+
+// Detect stuck "running" state on page load
+setTimeout(()=>{fetch('/api/stream').then(r=>{
+  const reader=r.body.getReader();const dec=new TextDecoder();
+  reader.read().then(({value})=>{
+    reader.cancel();
+    try{
+      const txt=dec.decode(value);const m=txt.match(/data:\s*(\{.*\})/);
+      if(m){const d=JSON.parse(m[1]);
+        if(d.running&&!d.current_panel){
+          // Server thinks it's running but no panel is being generated = stuck
+          $('forceResetBtn').classList.remove('hidden');
+          $('statusText').textContent='Stuck';
+          toast('Engine stuck. Hit Reset button.','error');
+        } else if(d.running){
+          // Actually running — show stop buttons
+          isRunning=true;setRunning(true);startSSE();
+        }
+      }
+    }catch(e){}
+  }).catch(()=>{});
+}).catch(()=>{})},1500);
 </script>
 </body>
 </html>
