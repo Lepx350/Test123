@@ -224,6 +224,16 @@ def stop():
     state["stop"] = True
     return jsonify(ok=True)
 
+@app.route("/api/force_reset", methods=["POST"])
+def force_reset():
+    """Force-reset stale running state. Kills the stuck flag unconditionally."""
+    state["running"] = False
+    state["stop"] = True
+    state["current_panel"] = ""
+    state["current_section"] = ""
+    state["_thread"] = None
+    return jsonify(ok=True, message="State reset. Ready for new generation.")
+
 @app.route("/api/delete_panel", methods=["POST"])
 def delete_panel():
     """Delete a single panel image so it can be regenerated."""

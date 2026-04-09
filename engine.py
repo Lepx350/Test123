@@ -429,8 +429,12 @@ def get_asset_type(panel):
         return 'noir'
     elif t in ('explain', 'fern') or 'fern' in t:
         return 'fern'
+    elif t == '2d' or t == 'motion':
+        return '2d'
     elif 'media' in t or t == 'media':
         return 'media'
+    elif t == 'transition':
+        return 'transition'
     elif 'gfx' in t:
         return 'fern'
     return 'unknown'
@@ -970,10 +974,16 @@ class AdaptiveDelay:
 adaptive_delay = AdaptiveDelay()
 
 
-def gen_chat_section(client, section_name, panels_data, callback=None):
-    """Generate panels in a section using chat for visual memory."""
+def gen_chat_section(client, section_name, panels_data, callback=None, chat_reset_interval=12):
+    """Generate panels in a section using chat for visual memory.
+    Resets chat every chat_reset_interval panels to prevent context overflow."""
     results = {}
-    try:
+    RESET_EVERY = chat_reset_interval
+    panels_since_reset = 0
+    chat = None
+
+    def _new_chat():
+        nonlocal chat
         chat = client.chats.create(model=get_active_model())
         try:
             chat.send_message(
@@ -983,6 +993,9 @@ def gen_chat_section(client, section_name, panels_data, callback=None):
             )
         except:
             pass
+
+    try:
+        _new_chat()
 
         for pd in panels_data:
             if pd.get("stop"):
@@ -995,6 +1008,17 @@ def gen_chat_section(client, section_name, panels_data, callback=None):
                     callback("skip", pid)
                 results[pid] = True
                 continue
+
+            # Reset chat to prevent context overflow
+            if panels_since_reset >= RESET_EVERY:
+                try:
+                    _new_chat()
+                    panels_since_reset = 0
+                    if callback:
+                        callback("generating", pid, "fresh chat")
+                except Exception as e:
+                    if callback:
+                        callback("warn", pid, f"chat reset failed: {str(e)[:40]}")
 
             if callback:
                 callback("generating", pid, pd.get("info", ""))
@@ -1014,6 +1038,7 @@ def gen_chat_section(client, section_name, panels_data, callback=None):
                 if img:
                     out_path.write_bytes(img)
                     results[pid] = True
+                    panels_since_reset += 1
                     if callback:
                         callback("ok", pid)
                 else:
@@ -1039,6 +1064,7 @@ def gen_chat_section(client, section_name, panels_data, callback=None):
                         if img2:
                             out_path.write_bytes(img2)
                             results[pid] = True
+                            panels_since_reset += 1
                             if callback:
                                 callback("ok", pid)
                             continue
