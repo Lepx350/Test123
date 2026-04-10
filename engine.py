@@ -1,9 +1,13 @@
 """
-STORYBOARD VISUAL ENGINE v10.6
+STORYBOARD VISUAL ENGINE v10.7
 13-Layer Consistency Engine -- Project-agnostic
 All content (characters, environments) loaded from JSX storyboard files.
 
 CHANGELOG:
+- v10.7: ENV BLEED FIX — force new chat session on environment change.
+         Inject "NEW LOCATION" override into prompt when env_id changes.
+         Chat system prompt now includes specific environment context.
+         Prev env tracked through skips. 429 retry uses env-aware prompt.
 - v10.6: Audit fixes — parse edit/text/source/audio fields, alias blocklist,
          char ID collision fix, word-boundary detection, 429 retry with refs,
          full pipeline L13 params, log cap, export metadata.
@@ -990,43 +994,75 @@ adaptive_delay = AdaptiveDelay()
 
 def gen_chat_section(client, section_name, panels_data, callback=None, chat_reset_interval=12):
     """Generate panels in a section using chat for visual memory.
-    Resets chat every chat_reset_interval panels to prevent context overflow."""
+    Resets chat every chat_reset_interval panels to prevent context overflow.
+    v10.7: Also resets chat on environment change to prevent location bleed."""
     results = {}
     RESET_EVERY = chat_reset_interval
     panels_since_reset = 0
     chat = None
+    prev_env = None  # v10.7: track previous environment for bleed detection
 
-    def _new_chat():
+    def _new_chat(env_id=None):
         nonlocal chat
         chat = client.chats.create(model=get_active_model())
+        # v10.7: Include specific environment context in system prompt
+        env_context = ""
+        if env_id:
+            envs = get_active_environments()
+            if env_id in envs:
+                env = envs[env_id]
+                env_context = (
+                    f" CURRENT LOCATION: {env['name']}. "
+                    f"{env.get('prompt_detail', env.get('prompt', ''))} "
+                    f"ALL images in this sequence take place in this specific location. "
+                    f"Do NOT carry over visual elements from any previous location. "
+                )
         try:
             chat.send_message(
                 f"You are generating a cinematic documentary storyboard. "
-                f"Section: {section_name}. {get_world_anchor()} "
+                f"Section: {section_name}. {get_world_anchor()}{env_context} "
                 f"Maintain absolute visual consistency across all images."
             )
         except:
             pass
 
     try:
-        _new_chat()
+        # v10.7: Use first panel's env for initial chat context
+        first_env = panels_data[0].get("env") if panels_data else None
+        _new_chat(first_env)
+        prev_env = first_env
 
         for pd in panels_data:
             if pd.get("stop"):
                 break
             pid = pd["id"]
             out_path = Path(pd["output"])
+            current_env = pd.get("env")
 
             if out_path.exists():
                 if callback:
                     callback("skip", pid)
                 results[pid] = True
+                prev_env = current_env  # v10.7: still track env through skips
                 continue
 
-            # Reset chat to prevent context overflow
-            if panels_since_reset >= RESET_EVERY:
+            # v10.7: Force new chat when environment changes (prevents location bleed)
+            env_changed = (current_env is not None and prev_env is not None
+                           and current_env != prev_env)
+            if env_changed:
                 try:
-                    _new_chat()
+                    _new_chat(current_env)
+                    panels_since_reset = 0
+                    if callback:
+                        callback("generating", pid, f"new location: {current_env}")
+                except Exception as e:
+                    if callback:
+                        callback("warn", pid, f"env reset failed: {str(e)[:40]}")
+
+            # Reset chat to prevent context overflow
+            elif panels_since_reset >= RESET_EVERY:
+                try:
+                    _new_chat(current_env)
                     panels_since_reset = 0
                     if callback:
                         callback("generating", pid, "fresh chat")
@@ -1044,7 +1080,21 @@ def gen_chat_section(client, section_name, panels_data, callback=None, chat_rese
                         contents.append(_resize_for_api(Image.open(rp)))
                     if len(contents) >= 3:
                         break
-                contents.append(pd["prompt"])
+
+                # v10.7: Inject location override when environment changed
+                prompt_text = pd["prompt"]
+                if env_changed:
+                    envs = get_active_environments()
+                    env_name = envs.get(current_env, {}).get("name", current_env) if current_env else ""
+                    prompt_text = (
+                        f"⚠️ NEW LOCATION — COMPLETELY DIFFERENT SCENE. "
+                        f"This scene takes place in: {env_name}. "
+                        f"DISCARD all visual memory of the previous location. "
+                        f"Do NOT show any elements from the previous scene "
+                        f"(no tunnels if now in a bank, no bank if now in a tunnel, etc). "
+                        f"Generate ONLY what this new prompt describes: {prompt_text}"
+                    )
+                contents.append(prompt_text)
 
                 resp = chat.send_message(contents, config=get_config())
                 adaptive_delay.success()
@@ -1072,7 +1122,7 @@ def gen_chat_section(client, section_name, panels_data, callback=None, chat_rese
                                 contents2.append(_resize_for_api(Image.open(rp)))
                             if len(contents2) >= 3:
                                 break
-                        contents2.append(pd["prompt"])
+                        contents2.append(prompt_text)  # v10.7: use env-aware prompt
                         resp2 = chat.send_message(contents2, config=get_config())
                         img2 = extract_image(resp2)
                         if img2:
@@ -1081,6 +1131,7 @@ def gen_chat_section(client, section_name, panels_data, callback=None, chat_rese
                             panels_since_reset += 1
                             if callback:
                                 callback("ok", pid)
+                            prev_env = current_env  # v10.7
                             continue
                     except:
                         pass
@@ -1088,6 +1139,7 @@ def gen_chat_section(client, section_name, panels_data, callback=None, chat_rese
                 if callback:
                     callback("fail", pid, str(e)[:80])
 
+            prev_env = current_env  # v10.7: track env through all panels
             adaptive_delay.wait()
 
     except Exception as e:
