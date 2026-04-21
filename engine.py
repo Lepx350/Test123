@@ -405,6 +405,12 @@ def _parse_panel_object(ptext, sec_id, sec_name):
         if bare_search:
             p['source_search'] = bare_search.group(1)
 
+    # ── Fallback: bare fallback: field (flat media panels from Director skill) ──
+    if not p.get('source_fallback'):
+        bare_fallback = re.search(r'(?<!\w)fallback:\s*"((?:[^"\\]|\\.)*)"', ptext)
+        if bare_fallback:
+            p['source_fallback'] = bare_fallback.group(1)
+
     km = re.search(r'kling:\s*\{([^}]+)\}', ptext)
     if km:
         ktext = km.group(1)
